@@ -1,4 +1,4 @@
-# MAS Intérprete (Ministerio de Sordos - IASD)
+# MAS LSP (Lenguaje de Señas Peruanas)
 
 ## "Más inclusión, más amor, más conexión."
 
