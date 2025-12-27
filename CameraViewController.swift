@@ -5,11 +5,11 @@ import SwiftUI
 
 // Wrapper para usar UIViewController en SwiftUI
 struct CameraView: UIViewControllerRepresentable {
-    @ObservedObject var handPoseDetector: HandPoseDetector
+    @ObservedObject var poseDetector: PoseDetector
 
     func makeUIViewController(context: Context) -> CameraViewController {
         let controller = CameraViewController()
-        controller.handPoseDetector = handPoseDetector
+        controller.poseDetector = poseDetector
         return controller
     }
 
@@ -21,10 +21,11 @@ class CameraViewController: UIViewController {
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private let videoDataOutput = AVCaptureVideoDataOutput()
 
-    var handPoseDetector: HandPoseDetector?
+    var poseDetector: PoseDetector?
 
-    // Capas para dibujar el esqueleto de la mano
-    private var overlayLayer = CAShapeLayer()
+    // Capas para dibujar
+    private var handOverlayLayer = CAShapeLayer()
+    private var bodyOverlayLayer = CAShapeLayer()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -35,7 +36,8 @@ class CameraViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         previewLayer?.frame = view.bounds
-        overlayLayer.frame = view.bounds
+        handOverlayLayer.frame = view.bounds
+        bodyOverlayLayer.frame = view.bounds
     }
 
     private func setupCamera() {
@@ -72,25 +74,37 @@ class CameraViewController: UIViewController {
     }
 
     private func setupOverlay() {
-        overlayLayer.fillColor = UIColor.clear.cgColor
-        overlayLayer.strokeColor = UIColor.green.cgColor
-        overlayLayer.lineWidth = 3
-        view.layer.addSublayer(overlayLayer)
+        // Configuración Capa Manos
+        handOverlayLayer.fillColor = UIColor.clear.cgColor
+        handOverlayLayer.strokeColor = UIColor.green.cgColor
+        handOverlayLayer.lineWidth = 3
+        view.layer.addSublayer(handOverlayLayer)
+
+        // Configuración Capa Cuerpo
+        bodyOverlayLayer.fillColor = UIColor.clear.cgColor
+        bodyOverlayLayer.strokeColor = UIColor.blue.cgColor
+        bodyOverlayLayer.lineWidth = 5 // Más grueso para el cuerpo
+        view.layer.addSublayer(bodyOverlayLayer)
     }
 
-    func drawHandPoints(points: [CGPoint]) {
+    func drawPose(poseData: PoseData) {
+        drawPoints(poseData.handPoints, on: handOverlayLayer)
+        drawPoints(poseData.bodyPoints, on: bodyOverlayLayer)
+    }
+
+    private func drawPoints(_ points: [CGPoint], on layer: CAShapeLayer) {
         let path = UIBezierPath()
 
         for point in points {
             // Convertir coordenadas normalizadas a coordenadas de la vista
             let x = point.x * view.bounds.width
-            let y = (1 - point.y) * view.bounds.height // Invertir Y porque Vision usa coordenadas normalizadas con origen abajo-izquierda
+            let y = (1 - point.y) * view.bounds.height // Invertir Y
 
             let circlePath = UIBezierPath(arcCenter: CGPoint(x: x, y: y), radius: 5, startAngle: 0, endAngle: 2 * .pi, clockwise: true)
             path.append(circlePath)
         }
 
-        overlayLayer.path = path.cgPath
+        layer.path = path.cgPath
     }
 }
 
@@ -98,10 +112,10 @@ extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
-        // Llamar al detector de manos
-        handPoseDetector?.processFrame(pixelBuffer: pixelBuffer) { [weak self] points in
+        // Llamar al detector
+        poseDetector?.processFrame(pixelBuffer: pixelBuffer) { [weak self] poseData in
             DispatchQueue.main.async {
-                self?.drawHandPoints(points: points)
+                self?.drawPose(poseData: poseData)
             }
         }
     }

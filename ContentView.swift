@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var speechRecognizer = SpeechRecognizer()
-    @StateObject private var handPoseDetector = HandPoseDetector()
+    @StateObject private var poseDetector = PoseDetector()
     @State private var mode: AppMode = .listening
 
     enum AppMode {
@@ -56,7 +56,7 @@ struct ContentView: View {
             } else {
                 // Modo: Ojo (Persona oyente ve traducción de señas)
                 ZStack {
-                    CameraView(handPoseDetector: handPoseDetector)
+                    CameraView(poseDetector: poseDetector)
                         .edgesIgnoringSafeArea(.all)
 
                     VStack {
@@ -69,7 +69,7 @@ struct ContentView: View {
                                 .background(Color.black.opacity(0.6))
                                 .cornerRadius(10)
 
-                            Text(handPoseDetector.detectedSign)
+                            Text(poseDetector.detectedSign)
                                 .font(.largeTitle)
                                 .bold()
                                 .foregroundColor(.yellow)
